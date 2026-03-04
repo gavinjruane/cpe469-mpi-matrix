@@ -1,0 +1,20 @@
+[
+  {
+    "file": "src/matrix.cc",
+    "arguments": [
+      "clang++",
+      "-Wall",
+      "-g",
+      "-pedantic",
+      "-I",
+      "include",
+      "-std=c++20",
+      "-c",
+      "src/matrix.cc",
+      "-o",
+      "src/matrix.o"
+    ],
+    "directory": "/Users/gavinruane/Documents/cpe469/cpe469-mpi-matrix",
+    "output": "src/matrix.o"
+  }
+]

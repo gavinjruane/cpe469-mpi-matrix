@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cstdlib>
 
-#include "matrix.h"
+#include "matrix.hpp"
 
 int main () {
   Matrix matrix1{2};
