@@ -19,7 +19,8 @@ class Matrix {
     Matrix(std::size_t size, bool randomize);
 
     std::size_t size() const;
-    const MatrixVector &data() const;
+    int *data();
+    const int *data() const;
 
     std::string to_string() const;
 

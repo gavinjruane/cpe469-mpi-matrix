@@ -15,7 +15,8 @@ Matrix::Matrix(std::size_t size, bool randomize)
     }
 
 std::size_t Matrix::size() const { return size_; }
-const Matrix::MatrixVector& Matrix::data() const { return matrix_; }
+int *Matrix::data() { return matrix_.data(); }
+const int *Matrix::data() const { return matrix_.data(); }
 
 std::string Matrix::to_string() const {
   std::string out = "[\n";
@@ -82,7 +83,7 @@ Matrix Matrix::MPI_multiply(
   Matrix b_copy = (rank == 0) ? m2 : Matrix{N, false};
   Matrix result{N, false};
 
-  MPI_Scatter(data(), rows * N, MPI_INT, loc_a.data(), rows * N, MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Scatter((void *) data(), rows * N, MPI_INT, loc_a.data(), rows * N, MPI_INT, 0, MPI_COMM_WORLD);
   MPI_Bcast(b_copy.data(), N * N, MPI_INT, 0, MPI_COMM_WORLD);
 
   MPI_Gather(loc_c.data(), rows * N, MPI_INT, result.data(), rows * N, MPI_INT, 0, MPI_COMM_WORLD);
