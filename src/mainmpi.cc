@@ -35,11 +35,8 @@ void sample_mpi (
 ) {
   int numprocs = arguments.numprocs;
   int rank = arguments.rank;
-  int chunk_size = arguments.chunk_size;
   
   std::printf("Hello from process %d of %d!\n", rank, numprocs);
-
-  chunk_size = 800 / numprocs;
 
   char greeting[100];
   if (rank != 0) {
