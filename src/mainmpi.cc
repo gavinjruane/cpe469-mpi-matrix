@@ -3,15 +3,40 @@
 #include <cstring>
 
 // #include "matrix.hpp"
+#include "matrix.hpp"
 #include "mpi.h"
 
 int main (int argc, char *argv[]) {
-  int numprocs, rank, chunk_size;
+  int numprocs = 0, rank = 0;
   
-  MPI_Init(NULL, NULL);
+  MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
 
+  MPIArguments arguments{rank, numprocs};
+
+  Matrix a{N, false};
+  Matrix b{N, false};
+
+  if (rank == 0) {
+    a = Matrix{N, true};
+    b = Matrix{N, true};
+  }
+
+  Matrix c = a.MPI_multiply(b, arguments);
+
+  MPI_Finalize();
+
+  return 0;
+}
+
+void sample_mpi (
+  MPIArguments arguments
+) {
+  int numprocs = arguments.numprocs;
+  int rank = arguments.rank;
+  int chunk_size = arguments.chunk_size;
+  
   std::printf("Hello from process %d of %d!\n", rank, numprocs);
 
   chunk_size = 800 / numprocs;
@@ -27,8 +52,4 @@ int main (int argc, char *argv[]) {
       std::printf("%s\n", greeting);
     }
   }
-
-  MPI_Finalize();
-
-  return 0;
 }

@@ -4,10 +4,15 @@
 #include <vector>
 
 #include "matrix.hpp"
+#include "mpi.h"
 
-Matrix::Matrix(std::size_t size)
+Matrix::Matrix(std::size_t size, bool randomize)
   : size_(size),
-    matrix_(random_matrix(size_)) {}
+    matrix_(empty_matrix(size)) {
+      if (randomize) {
+        fill_random();
+      }
+    }
 
 std::size_t Matrix::size() const { return size_; }
 const Matrix::MatrixVector& Matrix::data() const { return matrix_; }
@@ -18,9 +23,9 @@ std::string Matrix::to_string() const {
     out += "[";
     for (int c = 0; c < size_; c++) {
       if (c <= size_ - 2) {
-        out += std::to_string(matrix_[r][c]) + ", ";
+        out += std::to_string(value_at(r, c)) + ", ";
       } else {
-        out += std::to_string(matrix_[r][c]);
+        out += std::to_string(value_at(r, c));
       }
     }
     out += "]\n";
@@ -30,68 +35,89 @@ std::string Matrix::to_string() const {
   return out;
 }
 
-Matrix Matrix::sequential_multiply(
-  Matrix &m2
+int Matrix::value_at(
+  int row,
+  int col
 ) const {
-  Matrix result(this->size());
+  return matrix_[row * size() + col];
+}
+
+void Matrix::set(
+  int row,
+  int col,
+  int value
+) {
+  matrix_[row * size() + col] = value;
+}
+
+Matrix Matrix::sequential_multiply(
+  const Matrix &m2
+) const {
+  Matrix result(this->size(), false);
 
   for (int r = 0; r < size(); r++) {
     for (int c = 0; c < size(); c++) {
-      result.matrix_[r][c] = dot_product(size(), matrix_[r], m2.column_at(c));
+      int sum = 0;
+      for (int i = 0; i < size(); i++) {
+        sum += value_at(r, i) * m2.value_at(i, c);
+      }
+
+      result.set(r, c, sum);
     }
   }
 
   return result;
 }
 
-std::size_t size_;
-std::vector<std::vector<int>> matrix_;
-
-Matrix::MatrixVector Matrix::empty_matrix(std::size_t size) {
-  Matrix::MatrixVector m(size, std::vector<int>(size, 0));
-
-  return m;
-}
-
-std::vector<int> Matrix::column_at(
-  int column
+Matrix Matrix::MPI_multiply(
+  const Matrix &m2,
+  MPIArguments arguments
 ) const {
-  std::vector<int> colvec(size(), 0);
+  int numprocs = arguments.numprocs;
+  int rank = arguments.rank;
+  
+  int rows = N / numprocs;
+  std::vector<int> loc_a(rows * N);
+  std::vector<int> loc_c(rows * N);
+  Matrix b_copy = (rank == 0) ? m2 : Matrix{N, false};
+  Matrix result{N, false};
 
-  for (int i = 0; i < size(); i++) {
-    colvec[i] = matrix_[i][column];
-  }
+  MPI_Scatter(data(), rows * N, MPI_INT, loc_a.data(), rows * N, MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(b_copy.data(), N * N, MPI_INT, 0, MPI_COMM_WORLD);
 
-  return colvec;
-}
+  MPI_Gather(loc_c.data(), rows * N, MPI_INT, result.data(), rows * N, MPI_INT, 0, MPI_COMM_WORLD);
+  for (int r = 0; r < rows; r++) {
+    for (int c = 0; c < N; c++) {
+      int sum = 0;
 
-int Matrix::dot_product(
-  std::size_t size,
-  std::vector<int> v1,
-  std::vector<int> v2
-) const {
-  int result = 0;
+      for (int i = 0; i < N; i++) {
+        sum += loc_a[r * N + i] * b_copy.value_at(i, c);
+      }
 
-  for (int i = 0; i < size; i++) {
-    result += v1[i] * v2[i];
+      loc_c[r * N + c] = sum;
+    }
   }
 
   return result;
 }
 
-Matrix::MatrixVector Matrix::random_matrix(std::size_t size) {
-  Matrix::MatrixVector m(size, std::vector<int>(size, 0));
+Matrix::MatrixVector Matrix::empty_matrix(
+  std::size_t size
+) {
+  Matrix::MatrixVector m(size * size, 0);
 
+  return m;
+}
+
+void Matrix::fill_random() {
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_int_distribution<int> dist(0, 1000);
 
-  for (int r = 0; r < size; r++) {
-    for (int c = 0; c < size; c++) {
-      m[r][c] = dist(gen);
+  for (int r = 0; r < size(); r++) {
+    for (int c = 0; c < size(); c++) {
+      matrix_[r * size() + c] = dist(gen);
     }
   }
-
-  return m;
 }
 

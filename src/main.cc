@@ -4,8 +4,8 @@
 #include "matrix.hpp"
 
 int main () {
-  Matrix matrix1{2};
-  Matrix matrix2{2};
+  Matrix matrix1{2, true};
+  Matrix matrix2{2, true};
 
   std::cout << matrix1.to_string();
   std::cout << matrix2.to_string();
