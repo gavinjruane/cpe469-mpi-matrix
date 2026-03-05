@@ -2,9 +2,10 @@
 #include <random>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "matrix.hpp"
-#include "mpi.h"
+#include <mpi.h>
 
 Matrix::Matrix(std::size_t size, bool randomize)
   : size_(size),
@@ -76,17 +77,16 @@ Matrix Matrix::MPI_multiply(
 ) const {
   int numprocs = arguments.numprocs;
   int rank = arguments.rank;
-  
+
   int rows = N / numprocs;
   std::vector<int> loc_a(rows * N);
   std::vector<int> loc_c(rows * N);
   Matrix b_copy = (rank == 0) ? m2 : Matrix{N, false};
-  Matrix result{N, false};
 
-  MPI_Scatter((void *) data(), rows * N, MPI_INT, loc_a.data(), rows * N, MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Scatter((rank == 0) ? const_cast<int *>(data()) : nullptr, rows * N, MPI_INT, loc_a.data(), rows * N, MPI_INT, 0, MPI_COMM_WORLD);
+  std::cout << "rank " << rank << " loc_a[0] = " << loc_a[0] << std::endl;
   MPI_Bcast(b_copy.data(), N * N, MPI_INT, 0, MPI_COMM_WORLD);
 
-  MPI_Gather(loc_c.data(), rows * N, MPI_INT, result.data(), rows * N, MPI_INT, 0, MPI_COMM_WORLD);
   for (int r = 0; r < rows; r++) {
     for (int c = 0; c < N; c++) {
       int sum = 0;
@@ -98,6 +98,10 @@ Matrix Matrix::MPI_multiply(
       loc_c[r * N + c] = sum;
     }
   }
+  std::cout << "rank " << rank << " loc_c[0] = " << loc_c[0] << std::endl;
+
+  Matrix result{N, false};
+  MPI_Gather(loc_c.data(), rows * N, MPI_INT, (rank == 0) ? result.data() : nullptr, rows * N, MPI_INT, 0, MPI_COMM_WORLD);
 
   return result;
 }
@@ -121,4 +125,3 @@ void Matrix::fill_random() {
     }
   }
 }
-

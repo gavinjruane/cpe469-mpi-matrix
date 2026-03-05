@@ -1,6 +1,6 @@
-CC = clang++
+CC = mpic++
 CFLAGS  = -Wall -g -pedantic -I include -std=c++20
-LD = clang++
+LD = mpic++
 LDFLAGS = -Wall -g -I include
 
 SRC_DIR = src
